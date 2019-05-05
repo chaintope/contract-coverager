@@ -50,7 +50,7 @@ contract("VyperStorage", (accounts) => {
 ```
 
 ## Demo
-![](https://user-images.githubusercontent.com/1563840/57188087-e22b1400-6f33-11e9-8892-475a0454f056.png")
+![](https://user-images.githubusercontent.com/1563840/57188087-e22b1400-6f33-11e9-8892-475a0454f056.png)
 
 ## Licence
 [GPLv3](https://github.com/nakajo2011/contract-coverage/blob/master/LICENCE)
