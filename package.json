@@ -1,0 +1,72 @@
+{
+  "name": "contract-coverager",
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint src/**/*.js test/**/*.spec.js",
+    "lint:fix": "eslint src/**/*.js test/**/*.spec.js --fix",
+    "test": "mocha --colors ./test/**/*.spec.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nakajo2011/contract-coverager.git"
+  },
+  "keywords": [
+    "ethereum",
+    "solidity",
+    "vyper",
+    "coverage"
+  ],
+  "author": "Yukishige Nakajo <nakajo@chaintope.com>",
+  "license": "GPLv3",
+  "bugs": {
+    "url": "https://github.com/nakajo2011/contract-coverager/issues"
+  },
+  "homepage": "https://github.com/nakajo2011/contract-coverager#readme",
+  "eslintConfig": {
+    "parser": "babel-eslint",
+    "extends": "standard",
+    "plugins": [
+      "mocha",
+      "chai-friendly"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2017
+    },
+    "env": {
+      "mocha": true
+    },
+    "rules": {
+      "space-before-function-paren": [
+        "error",
+        "never"
+      ],
+      "no-underscore-dangle": 0,
+      "mocha/no-exclusive-tests": "error",
+      "no-unused-expressions": 0,
+      "chai-friendly/no-unused-expressions": 2
+    }
+  },
+  "dependencies": {
+    "cli-table": "^0.3.1",
+    "colors": "^1.3.3",
+    "keccak256": "^1.0.0",
+    "truffle-code-utils": "^1.2.2",
+    "web3-provider-engine": "^15.0.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "chai": "^4.2.0",
+    "eslint": "^5.16.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-loader": "^2.0.0",
+    "eslint-plugin-chai-friendly": "^0.4.1",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-mocha": "^5.1.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-promise": "^3.8.0",
+    "eslint-plugin-react": "^7.9.1",
+    "eslint-plugin-standard": "^3.1.0",
+    "mocha": "^6.1.4"
+  }
+}
