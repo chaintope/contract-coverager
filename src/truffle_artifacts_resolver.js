@@ -1,6 +1,7 @@
 const glob = require('glob')
 const fs = require('fs')
 const keccak256 = require('keccak256')
+const resolve = require('path').resolve
 
 function conscompleteSource(sourceData) {
   const s = Object.assign({}, sourceData)
@@ -61,8 +62,11 @@ class TruffleArtifactsResolver {
    */
   load() {
     const artifactFileNames = glob.sync(this.artifactsGlob, { absolute: true })
+    if (artifactFileNames.length === 0) {
+      throw new Error(`Not found artifacts json files. maybe wrong glob: ${this.artifactsGlob}`)
+    }
     artifactFileNames.forEach(artifactFileName => {
-      const artifact = require(artifactFileName)
+      const artifact = require(resolve(artifactFileName))
 
       if (!artifact.bytecode) {
         console.warn(

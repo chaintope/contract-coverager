@@ -17,17 +17,17 @@ inherits(CoverageSubprovider, Subprovider)
  * set artifact resolver for instanciation.
  *
  * @param provider Wrapped Provider(as web3.providers.HttpProvider)
- * @param resolver TruffleArtifactResolver (optional. if want to customize.)
+ * @param jsonGlob file glob for *.json files.
  * @constructor
  */
-function CoverageSubprovider(provider, resolver = new TruffleArtifactResolver()) {
+function CoverageSubprovider(provider, jsonGlob = null) {
   if (!provider) throw new Error('CoverageSubprovider - no provider specified')
   if (!provider.sendAsync) {
     if (!provider.send) throw new Error('CoverageSubprovider - specified provider does not have both sendAsync and send method')
     provider.sendAsync = provider.send
   }
   this.provider = provider
-  this.resolver = resolver
+  this.resolver = jsonGlob ? new TruffleArtifactResolver(jsonGlob) : new TruffleArtifactResolver()
   this.collecotr = new TraceCollector()
 }
 
@@ -55,12 +55,12 @@ function isNewContract(address) {
   return (address === '0x' || address === '' || address === undefined)
 }
 
-function injectInTruffle(artifacts, web3) {
+function injectInTruffle(artifacts, web3, fglob = null) {
   if (artifacts.require._coverageProvider) {
     return artifacts.require._coverageProvider
   }
 
-  const csub = new CoverageSubprovider(web3.currentProvider)
+  const csub = new CoverageSubprovider(web3.currentProvider, fglob)
   const engine = new Web3ProviderEngine()
   engine.addProvider(csub)
   web3.setProvider(new NonEmitterProvider(engine))
