@@ -18,7 +18,7 @@ const traceLogs = (...pcs) => {
   })
 }
 
-describe('trace.js', function() {
+describe('match_helper.js', function() {
   const bytecodes = '0x6001600201'// PUSH1 1 PUSH1 2 ADD
 
   describe('matchUsedOpecodes', function() {
