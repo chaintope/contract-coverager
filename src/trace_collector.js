@@ -21,8 +21,8 @@ class TraceCollector {
       // deployed transaction is not function call message.
       return
     }
-    if (bytecodes.length < 4) {
-      console.warn(`Not Contract call message. ${JSON.stringify(txRequestParams)}`)
+    if (bytecodes.length < 8) {
+      // console.warn(`Not Contract call message. ${JSON.stringify(txRequestParams)}`)
       return
     }
     if (this.funcCallMap[address] === undefined) {

@@ -1,5 +1,6 @@
 const inherits = require('util').inherits
 const promisify = require('util').promisify
+const { separateTraceLogs } = require('./tracelog_utils')
 const Subprovider = require('web3-provider-engine/subproviders/subprovider')
 const TraceCollector = require('./trace_collector')
 const TruffleArtifactResolver = require('./truffle_artifacts_resolver')
@@ -28,7 +29,7 @@ function CoverageSubprovider(provider, jsonGlob = null) {
   }
   this.provider = provider
   this.resolver = jsonGlob ? new TruffleArtifactResolver(jsonGlob) : new TruffleArtifactResolver()
-  this.collecotr = new TraceCollector()
+  this.collector = new TraceCollector()
 }
 
 function debugTraceTransaction(txhash, cb) {
@@ -37,8 +38,8 @@ function debugTraceTransaction(txhash, cb) {
     method: 'debug_traceTransaction',
     params: [txhash, {
       disableStorage: true,
-      disableMemory: true,
-      disableStack: true
+      disableMemory: true
+      // disableStack: true
     }]
   }, cb)
 }
@@ -84,34 +85,42 @@ CoverageSubprovider.prototype._getCode = promisify(getCode)
 CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
   const self = this
 
-  function getTraceAndCollect(contractAddress) {
-    return function(txHash) {
-      self._debugTraceTransaction(txHash)
-        .then(res => {
-          self.collecotr.add(contractAddress, res.result)
-          return self._getCode(contractAddress)
-        })
-        .then(getCodeResponse => {
-          if (!self.resolver.exists(contractAddress)) {
-            self.resolver.findByCodeHash(getCodeResponse.result, contractAddress)
-          }
-        })
+  function findContract(contractAddress) {
+    return async() => {
+      if (!self.resolver.exists(contractAddress)) {
+        const response = await self._getCode(contractAddress)
+        if (response.result != null) { self.resolver.findByCodeHash(response.result, contractAddress) }
+      }
     }
   }
 
-  let traceFunc = function() {}
+  function getTraceAndCollect(contractAddress) {
+    return async function(txHash) {
+      const response = await self._debugTraceTransaction(txHash)
+      // console.log(JSON.stringify(res))
+      const separated = separateTraceLogs(response.result.structLogs)
+      self.collector.add(contractAddress, separated[0].traceLogs)
+      await findContract(contractAddress)()
+      for (let i = 1; i < separated.length; i++) {
+        const trace = separated[i]
+        self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
+        self.collector.add(trace.address, trace.traceLogs)
+        await findContract(trace.address)()
+      }
+    }
+  }
+
+  let traceFunc = async() => {}
   switch (payload.method) {
     case 'eth_call':
-      self.collecotr.recordFunctionCall(payload.params[0])
+      self.collector.recordFunctionCall(payload.params[0])
+      traceFunc = findContract(payload.params[0].to)
       break
 
     case 'eth_sendTransaction':
       const param = payload.params[0]
       if (!isNewContract(param.to) && param.data.length > 4) {
-        self.collecotr.recordFunctionCall(param)
-        //   next(getTraceAndCollect(param.to))
-        // } else {
-        //   next(null)
+        self.collector.recordFunctionCall(param)
         traceFunc = getTraceAndCollect(param.to)
       }
       break
@@ -119,9 +128,10 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
 
   this.provider.sendAsync(payload, function(err, response) {
     if (err) return end(err)
-    traceFunc(response.result)
-    if (response.error) return end(new Error(response.error.message))
-    end(null, response.result)
+    traceFunc(response.result).then(() => {
+      if (response.error) return end(response.error.message)
+      end(null, response.result)
+    })
   })
 }
 
@@ -131,6 +141,6 @@ CoverageSubprovider.prototype.start = function() {
 
 CoverageSubprovider.prototype.stop = function() {
   const self = this
-  const coverager = new Coverager(self.resolver, self.collecotr)
+  const coverager = new Coverager(self.resolver, self.collector)
   coverager.report()
 }

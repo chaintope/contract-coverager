@@ -19,12 +19,15 @@ function matchUsedOpecodes(bytecodes, structLogs, numInstructions) {
   const pc2IndexMap = getPcToInstructionIndexMapping(opcodeStructs)
   const res = JSON.parse(JSON.stringify(opcodeStructs))
   structLogs.forEach(log => {
-    const sm = res[pc2IndexMap[log.pc]]
-    if (sm === undefined) {
-      throw new Error(`unknown program counter: ${log.pc}, details:\n${JSON.stringify(log, null, '  ')}`)
+    if (log && log.pc !== undefined) {
+      const sm = res[pc2IndexMap[log.pc]]
+      if (sm === undefined) {
+        console.warn(`unknown program counter: ${log.pc}, depth=${log.depth}`)//, details:\n${JSON.stringify(log, null, '  ')}`)
+      } else {
+        sm.vmTraces = sm.vmTraces || 0
+        sm.vmTraces++
+      }
     }
-    sm.vmTraces = sm.vmTraces || 0
-    sm.vmTraces++
   })
   return res
 }

@@ -1,5 +1,6 @@
 const { countUsed, matchUsedOpecodes, matchCalledFunction } = require('../src/match_helper')
 const { expect } = require('chai')
+const sinon = require('sinon')
 
 const traceLogTemplate = {
   'depth': 0,
@@ -20,6 +21,12 @@ const traceLogs = (...pcs) => {
 
 describe('match_helper.js', function() {
   const bytecodes = '0x6001600201'// PUSH1 1 PUSH1 2 ADD
+
+  let spy
+  before(() => {
+    spy = sinon.spy(console, 'warn')
+  })
+  after(() => spy.restore())
 
   describe('matchUsedOpecodes', function() {
     it('matchUsed', async() => {
@@ -45,8 +52,8 @@ describe('match_helper.js', function() {
     })
 
     it('unknown pc', async() => {
-      const coverage = () => matchUsedOpecodes(bytecodes, traceLogs(0, 1), bytecodes.length / 2)
-      expect(coverage).to.throw(Error, 'unknown program counter: 1, details:\n')
+      matchUsedOpecodes(bytecodes, traceLogs(0, 1), bytecodes.length / 2)
+      expect(spy.calledWith('unknown program counter: 1, depth=0')).to.be.true
     })
   })
 

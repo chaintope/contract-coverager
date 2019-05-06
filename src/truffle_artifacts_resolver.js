@@ -75,7 +75,7 @@ class TruffleArtifactsResolver {
         return
       }
       const data = conscompleteSource(artifact)
-      data.functions = artifact.abi.map(abiRevertFunctionSignature)
+      data.functions = artifact.abi.filter(item => item.type === 'function').map(abiRevertFunctionSignature)
         .reduce((reducer, item) => {
           const [key, value] = Object.entries(item)[0]
           reducer[value] = key
@@ -122,7 +122,7 @@ class TruffleArtifactsResolver {
       )
     })
     if (index === -1) {
-      console.warn(`Unknown contract address: ${address}`)
+      // console.warn(`Unknown contract address: ${address}`)
     } else {
       this.addressIndexMap[address] = index
       return this.contractsData[index]

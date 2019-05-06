@@ -40,6 +40,7 @@ function normalizedCallDatas(opcode, stack) {
   let gas, address, wei, inaddr, insize
   switch (opcode) {
     case OpCode.StaticCall:
+    case OpCode.DelegateCall:
       [gas, address, inaddr, insize] = reverseStack
       wei = 0
       break
@@ -51,10 +52,16 @@ function normalizedCallDatas(opcode, stack) {
 }
 
 function analyzeCallTarget(traceData) {
-  if(!isCallLike(traceData.op)) {
+  if (!isCallLike(traceData.op)) {
     throw new Error(`Not Call like opcode: ${traceData.op}`)
   }
-  const [gas, address, wei, inaddr, insize] = normalizedCallDatas(traceData.op, traceData.stack)
+  if (!traceData.stack) {
+    return { address: 'unknown', functionId: 'unknown' }
+  }
+  const [, address,, inaddr, insize] = normalizedCallDatas(traceData.op, traceData.stack)
+  if (!traceData.memory) {
+    return { address: '0x' + address.slice(24), functionId: 'unknown' }
+  }
   const flattenMemory = traceData.memory.reduce((flatten, hex) => flatten.concat(hex))
   const startPos = parseInt(inaddr, 16) * 2
   const endPos = startPos + parseInt(insize, 16) * 2
@@ -79,24 +86,37 @@ function separateTraceLogs(traceLogs) {
     traceLogs: []
   }
   res[0] = context
-  traceLogs.forEach((log) => {
-    context.traceLogs.push(log)
-    if(isCallLike(log.op)) {
-      const analyzed = analyzeCallTarget(log)
-      callStack.unshift(context) // save for changing context.
-      context = {
-        address: analyzed.address,
-        functionId: analyzed.functionId,
-        traceLogs: []
+  let searchFunctionId = false
+  traceLogs.forEach((log, index) => {
+    context.traceLogs.push({ depth: log.depth, op: log.op, pc: log.pc })
+    if (searchFunctionId && log.op === 'CALLDATALOAD') {
+      const functionId = '0x' + traceLogs[index + 1].stack[0]
+      context.functionId = functionId
+      searchFunctionId = false
+    }
+    if (isCallLike(log.op)) {
+      if (traceLogs[index + 1] && log.depth < traceLogs[index + 1].depth) {
+        // if not increase depth then, send just ETH or precompiled contract.
+        // so, not change context.
+        const analyzed = analyzeCallTarget(log)
+        callStack.push(context) // save for changing context.
+        context = {
+          address: analyzed.address,
+          functionId: analyzed.functionId,
+          traceLogs: []
+        }
+        if (context.functionId === 'unknown') {
+          searchFunctionId = true
+        }
+        res.push(context) // save separated logs.
       }
-      res.push(context) // save separated logs.
-    } else if(isEndOpcode(log.op)) {
+    } else if (isEndOpcode(log.op)) {
       context = callStack.pop()
     }
   })
 
-  if(callStack.length > 0) {
-    throw new Error("Invalid trace logs. The pair of `Call type opcode` and `Stop type opecode` is unmatching.")
+  if (callStack.length > 0) {
+    throw new Error('Invalid trace logs. The pair of `Call type opcode` and `Stop type opecode` is unmatching.')
   }
 
   return res

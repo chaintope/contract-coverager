@@ -41,26 +41,28 @@ class Coverager {
   report() {
     const self = this
     const matchingDatas = self._matching()
-    console.log('\n\n')
-    console.log(colors.bold.underline('Coverage report.'))
+
+    let resultStr = '\n\n' + colors.bold.underline('Coverage report.\n')
     Object.keys(matchingDatas).forEach((contractName, index) => {
-      console.log(`(${index + 1}) ${contractName}`)
+      resultStr += `(${index + 1}) ${contractName}\n`
       const data = matchingDatas[contractName]
       const numInstructions = data.contract.compiler.name === 'solc' ? null : data.contract.deployedBytecode.length / 2
-      this.reportUsedOpecodes(data.contract.deployedBytecode, data.traces, numInstructions)
-      this.reportMethodCalled(data.contract.functions, data.funcCalls)
+      resultStr += this.reportUsedOpecodes(data.contract.deployedBytecode, data.traces, numInstructions)
+      resultStr += this.reportMethodCalled(data.contract.functions, data.funcCalls)
+      resultStr += '\n\n'
     })
+    console.log(resultStr)
   }
 
   reportUsedOpecodes(bytecodes, structLogs, numInstructions) {
     const matching = matchUsedOpecodes(bytecodes, structLogs, numInstructions)
     const usedTotally = countUsed(matching)
-    console.log(`deployedBytecode coverage: ${Number((usedTotally * 100) / matching.length).toFixed(2)}% (${usedTotally}/${matching.length})`)
-    console.log('')
+    return `deployedBytecode coverage: ${Number((usedTotally * 100) / matching.length).toFixed(2)}% (${usedTotally}/${matching.length})\n`
   }
 
   reportMethodCalled(functions, calls) {
-    const table = new Table({ head: ['method', 'call count'], colWidths: [20, 20], style: { head: ['bold'] } })
+    const masLength = Math.max(...Object.keys(functions).map(sig => sig.length), 20)
+    const table = new Table({ head: ['method', 'call count'], colWidths: [masLength + 2, 20], style: { head: ['bold'] } })
     let calledCount = 0
     let functionCount = 0
     Object.entries(matchCalledFunction(functions, calls)).forEach(item => {
@@ -73,8 +75,9 @@ class Coverager {
       table.push(item)
       functionCount++
     })
-    console.log(`method coverage          : ${Number((calledCount * 100) / functionCount).toFixed(2)}% (${calledCount}/${functionCount})`)
-    console.log(table.toString())
+    let res = `method coverage          : ${Number((calledCount * 100) / functionCount).toFixed(2)}% (${calledCount}/${functionCount})\n`
+    res += table.toString()
+    return res
   }
 }
 
