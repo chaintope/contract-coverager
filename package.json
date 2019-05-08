@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nakajo2011/contract-coverager.git"
+    "url": "git+https://github.com/chaintope/contract-coverager.git"
   },
   "keywords": [
     "ethereum",
@@ -20,9 +20,9 @@
   "author": "Yukishige Nakajo <nakajo@chaintope.com>",
   "license": "GPLv3",
   "bugs": {
-    "url": "https://github.com/nakajo2011/contract-coverager/issues"
+    "url": "https://github.com/chaintope/contract-coverager/issues"
   },
-  "homepage": "https://github.com/nakajo2011/contract-coverager#readme",
+  "homepage": "https://github.com/chaintope/contract-coverager#readme",
   "eslintConfig": {
     "parser": "babel-eslint",
     "extends": "standard",
