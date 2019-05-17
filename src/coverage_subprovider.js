@@ -44,6 +44,14 @@ function debugTraceTransaction(txhash, cb) {
   }, cb)
 }
 
+function sendTransaction(param, cb) {
+  const self = this
+  self.emitPayload({
+    method: 'eth_sendTransaction',
+    params: [param]
+  }, cb)
+}
+
 function getCode(address, cb) {
   const self = this
   self.emitPayload({
@@ -80,6 +88,7 @@ function injectInTruffle(artifacts, web3, fglob = null) {
 
 CoverageSubprovider.injectInTruffle = injectInTruffle
 CoverageSubprovider.prototype._debugTraceTransaction = promisify(debugTraceTransaction)
+CoverageSubprovider.prototype._sendTransaction = promisify(sendTransaction)
 CoverageSubprovider.prototype._getCode = promisify(getCode)
 
 CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
@@ -97,7 +106,6 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
   function getTraceAndCollect(contractAddress) {
     return async function(txHash) {
       const response = await self._debugTraceTransaction(txHash)
-      // console.log(JSON.stringify(res))
       const separated = separateTraceLogs(response.result.structLogs)
       self.collector.add(contractAddress, separated[0].traceLogs)
       await findContract(contractAddress)()
@@ -113,8 +121,9 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
   let traceFunc = async() => {}
   switch (payload.method) {
     case 'eth_call':
-      self.collector.recordFunctionCall(payload.params[0])
-      traceFunc = findContract(payload.params[0].to)
+      // self.collector.recordFunctionCall(payload.params[0])
+      // traceFunc = findContract(payload.params[0].to)
+      traceFunc = () => self._sendTransaction(payload.params[0])
       break
 
     case 'eth_sendTransaction':
@@ -128,10 +137,10 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
 
   this.provider.sendAsync(payload, function(err, response) {
     if (err) return end(err)
+    if (response.error) return end(response.error.message)
     traceFunc(response.result).then(() => {
-      if (response.error) return end(response.error.message)
       end(null, response.result)
-    })
+    }).catch(e => end(e))
   })
 }
 
