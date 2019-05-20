@@ -90,8 +90,7 @@ function separateTraceLogs(traceLogs) {
   traceLogs.forEach((log, index) => {
     context.traceLogs.push({ depth: log.depth, op: log.op, pc: log.pc })
     if (searchFunctionId && log.op === 'CALLDATALOAD') {
-      const functionId = '0x' + traceLogs[index + 1].stack[0]
-      context.functionId = functionId
+      context.functionId = '0x' + traceLogs[index + 1].stack[0]
       searchFunctionId = false
     }
     if (isCallLike(log.op)) {

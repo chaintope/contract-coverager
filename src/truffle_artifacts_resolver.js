@@ -2,6 +2,7 @@ const glob = require('glob')
 const fs = require('fs')
 const keccak256 = require('keccak256')
 const resolve = require('path').resolve
+const { NEW_CONTRACT } = require('./constants')
 
 function conscompleteSource(sourceData) {
   const s = Object.assign({}, sourceData)
@@ -43,7 +44,7 @@ function extractFunctionsInfo(abi) {
   const res = {}
   // add constructor signature
   const constructor = 'constructor(' + abi.filter(item => item.type === 'constructor').map(toTypeArray) + ')'
-  res[constructor] = 'NEW_CONSTANT'
+  res[constructor] = NEW_CONTRACT
   // add functions signature
   const functions = abi.filter(item => item.type === 'function').map(abiRevertFunctionSignature)
     .reduce((reducer, item) => {

@@ -1,6 +1,7 @@
 const Table = require('cli-table')
 const colors = require('colors')
 const { flatten, matchCalledFunction, matchUsedOpecodes, countUsed } = require('./match_helper')
+const { TRACE_LOG_TYPE } = require('./trace_collector')
 
 /**
  *
@@ -26,12 +27,15 @@ class Coverager {
     })
 
     const coverageRawDatas = {}
+    // transform to ContractName Key map.
     indexBaseAddressArray.forEach((addrs, index) => {
       const rawData = {}
       rawData.contract = self.resolver.contractsData[index]
-      const traces = addrs.map(addr => self.collector.traceMap[addr])
+      const functionTraces = addrs.map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.FUNCTION])
+      const createTraces = addrs.map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.CREATE])
       const funcCalls = addrs.map(addr => self.collector.funcCallMap[addr])
-      rawData.traces = flatten(traces)
+      rawData.functionTraces = flatten(functionTraces)
+      rawData.createTraces = flatten(createTraces)
       rawData.funcCalls = flatten(funcCalls)
       coverageRawDatas[rawData.contract.contractName] = rawData
     })
@@ -47,19 +51,29 @@ class Coverager {
       resultStr += `(${index + 1}) ${contractName}\n`
       const data = matchingDatas[contractName]
       const numInstructions = data.contract.compiler.name === 'solc' ? null : data.contract.deployedBytecode.length / 2
-      resultStr += this.reportUsedOpecodes(data.contract.deployedBytecode, data.traces, numInstructions)
+      resultStr += this.reportUsedOpecodes(data.contract.bytecode, data.contract.deployedBytecode, data.createTraces, data.functionTraces, numInstructions)
       resultStr += this.reportMethodCalled(data.contract.functions, data.funcCalls)
       resultStr += '\n\n'
     })
     console.log(resultStr)
   }
 
-  reportUsedOpecodes(bytecodes, structLogs, numInstructions) {
-    const matching = matchUsedOpecodes(bytecodes, structLogs, numInstructions)
+  reportUsedOpecodes(bytecodes, deployedBytecodes, createTraces, functionTraces, numInstructions) {
+    const matching = matchUsedOpecodes(deployedBytecodes, functionTraces, numInstructions)
+    const matchingCreation = matchUsedOpecodes(bytecodes, createTraces, numInstructions)
     const usedTotally = countUsed(matching)
-    return `deployedBytecode coverage: ${Number((usedTotally * 100) / matching.length).toFixed(2)}% (${usedTotally}/${matching.length})\n`
+    const createTotally = countUsed(matchingCreation)
+    // TODO: Almost case, this code is good.
+    // but, should check more struct, to analyze difference of both bytecodes and deployedBytecodes.
+    const constructorCodes = matchingCreation.length - matching.length
+    let resStr = this._percentageReport('deployedBytecode coverage', usedTotally, matching.length)
+    resStr += this._percentageReport('constructor code coverage', createTotally, constructorCodes)
+    return resStr
   }
 
+  _percentageReport(prefixStr, used, total) {
+    return `${prefixStr}: ${Number((used * 100) / total).toFixed(2)}% (${used}/${total})\n`
+  }
   reportMethodCalled(functions, calls) {
     const masLength = Math.max(...Object.keys(functions).map(sig => sig.length), 20)
     const table = new Table({ head: ['method', 'call count'], colWidths: [masLength + 2, 20], style: { head: ['bold'] } })
