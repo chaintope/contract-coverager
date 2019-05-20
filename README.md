@@ -49,11 +49,14 @@ contract("VyperStorage", (accounts) => {
 })
 ```
 
+## CAUTION
+if request method is eth_call, then this Lib re-request eth_sendTransaction with same params, for getting traceLogs.
+so that, in using this coverage tool, more gas is consumes. may `out of gas` error a lot of happen.
+
 ## Demo
-![](https://user-images.githubusercontent.com/1563840/57188087-e22b1400-6f33-11e9-8892-475a0454f056.png)
+![](https://user-images.githubusercontent.com/1563840/58031554-9b583380-7b5b-11e9-80ee-a87cead6d210.png)
 
 ## Not yet support list
-- `eth_call` opcodes trace.
 - Solidity's Contract (maybe available, but not tested)
 
 ## Licence
