@@ -5,6 +5,7 @@ const Subprovider = require('web3-provider-engine/subproviders/subprovider')
 const { TraceCollector, TRACE_LOG_TYPE } = require('./trace_collector')
 const TruffleArtifactResolver = require('./truffle_artifacts_resolver')
 const Coverager = require('./coverager')
+const { NEW_CONTRACT } = require('./constants')
 
 const NonEmitterProvider = require('./non_emitter_provider')
 const Web3ProviderEngine = require('web3-provider-engine')
@@ -136,10 +137,13 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
       await findContract(contractAddress)()
       for (let i = 1; i < separated.length; i++) {
         const trace = separated[i]
-        self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
-        // TODO: separated logs check type. if that trigger by CREATE opcode then,
-        // traceType should be set TRACE_LOG_TYPE.CREATE.
-        self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.FUNCTION)
+        if (trace.functionId === NEW_CONTRACT) {
+          self.collector.recordCreation(trace.address)
+          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.CREATE)
+        } else {
+          self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
+          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.FUNCTION)
+        }
         await findContract(trace.address)()
       }
       return txHash
