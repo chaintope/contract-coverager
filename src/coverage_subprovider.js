@@ -173,7 +173,7 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
 
     case 'eth_sendTransaction':
       const param = payload.params[0]
-      if (param.data.length > 4) { // data empty tx is just send ETH tx.
+      if (param.data && param.data.length > 4) { // data empty tx is just send ETH tx.
         if (isNewContract(param.to)) {
           traceFunc = creationTraceAndCollect(param.data)
         } else {
