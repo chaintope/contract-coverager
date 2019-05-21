@@ -30,7 +30,7 @@ function bytecodeToBytecodeRegex(bytecode, compilerType) {
   return bytecodeRegex.slice(0, MAX_REGEX_LENGTH)
 }
 
-const toTypeArray = (abiItem) => abiItem.inputs.map(input => input.type).join('.')
+const toTypeArray = (abiItem) => abiItem.inputs.map(input => input.type).join(',')
 function abiRevertFunctionSignature(abiItem) {
   let signature = abiItem.name + '('
   signature += toTypeArray(abiItem)
