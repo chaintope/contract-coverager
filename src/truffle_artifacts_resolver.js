@@ -2,6 +2,7 @@ const glob = require('glob')
 const fs = require('fs')
 const keccak256 = require('keccak256')
 const resolve = require('path').resolve
+const { NEW_CONTRACT } = require('./constants')
 
 function conscompleteSource(sourceData) {
   const s = Object.assign({}, sourceData)
@@ -29,21 +30,29 @@ function bytecodeToBytecodeRegex(bytecode, compilerType) {
   return bytecodeRegex.slice(0, MAX_REGEX_LENGTH)
 }
 
+const toTypeArray = (abiItem) => abiItem.inputs.map(input => input.type).join(',')
 function abiRevertFunctionSignature(abiItem) {
   let signature = abiItem.name + '('
-
-  abiItem.inputs.forEach(function(input, index) {
-    signature += input.type
-
-    if (index < abiItem.inputs.length - 1) {
-      signature += ','
-    }
-  })
-
+  signature += toTypeArray(abiItem)
   signature += ')'
 
   const funcId = '0x' + keccak256(signature).toString('hex').slice(0, 8)
   return { [funcId]: signature }
+}
+
+function extractFunctionsInfo(abi) {
+  const res = {}
+  // add constructor signature
+  const constructor = 'constructor(' + abi.filter(item => item.type === 'constructor').map(toTypeArray) + ')'
+  res[constructor] = NEW_CONTRACT
+  // add functions signature
+  const functions = abi.filter(item => item.type === 'function').map(abiRevertFunctionSignature)
+    .reduce((reducer, item) => {
+      const [funcId, signature] = Object.entries(item)[0]
+      reducer[signature] = funcId
+      return reducer
+    }, {})
+  return Object.assign(res, functions)
 }
 
 class TruffleArtifactsResolver {
@@ -75,12 +84,7 @@ class TruffleArtifactsResolver {
         return
       }
       const data = conscompleteSource(artifact)
-      data.functions = artifact.abi.filter(item => item.type === 'function').map(abiRevertFunctionSignature)
-        .reduce((reducer, item) => {
-          const [key, value] = Object.entries(item)[0]
-          reducer[value] = key
-          return reducer
-        }, {})
+      data.functions = extractFunctionsInfo(artifact.abi)
       this.contractsData.push(data)
     })
   }

@@ -1,4 +1,5 @@
 const { countUsed, matchUsedOpecodes, matchCalledFunction } = require('../src/match_helper')
+const { NEW_CONTRACT } = require('../src/constants')
 const { expect } = require('chai')
 const sinon = require('sinon')
 
@@ -97,6 +98,14 @@ describe('match_helper.js', function() {
       expect(matching['totalSupply()']).to.equal(1)
       expect(matching['balanceOf(address)']).to.equal(2)
       expect(matching['transfer(address,uint256)']).to.equal(1)
+    })
+    it('create', async() => {
+      let matching = matchCalledFunction({
+        'totalSupply()': '0x18160ddd',
+        'constructor()': NEW_CONTRACT
+      }, [NEW_CONTRACT])
+      expect(matching['constructor()']).to.equal(1)
+      expect(matching['totalSupply()']).to.equal(0)
     })
   })
 

@@ -1,6 +1,8 @@
+const { NEW_CONTRACT } = require('./constants')
 
 const OpCode = {
   Create: 'CREATE',
+  Create2: 'CREATE2',
   Call: 'CALL',
   CallCode: 'CALLCODE',
   StaticCall: 'STATICCALL',
@@ -15,10 +17,21 @@ const OpCode = {
 function isCallLike(op) {
   return (
     [
+      OpCode.Create,
+      OpCode.Create2,
       OpCode.Call,
       OpCode.CallCode,
       OpCode.StaticCall,
       OpCode.DelegateCall
+    ].indexOf(op) >= 0
+  )
+}
+
+function isCreateLike(op) {
+  return (
+    [
+      OpCode.Create,
+      OpCode.Create2
     ].indexOf(op) >= 0
   )
 }
@@ -55,6 +68,9 @@ function analyzeCallTarget(traceData) {
   if (!isCallLike(traceData.op)) {
     throw new Error(`Not Call like opcode: ${traceData.op}`)
   }
+  if (isCreateLike(traceData.op)) {
+    return { address: undefined, functionId: NEW_CONTRACT }
+  }
   if (!traceData.stack) {
     return { address: 'unknown', functionId: 'unknown' }
   }
@@ -90,8 +106,7 @@ function separateTraceLogs(traceLogs) {
   traceLogs.forEach((log, index) => {
     context.traceLogs.push({ depth: log.depth, op: log.op, pc: log.pc })
     if (searchFunctionId && log.op === 'CALLDATALOAD') {
-      const functionId = '0x' + traceLogs[index + 1].stack[0]
-      context.functionId = functionId
+      context.functionId = '0x' + traceLogs[index + 1].stack[0]
       searchFunctionId = false
     }
     if (isCallLike(log.op)) {
@@ -103,7 +118,8 @@ function separateTraceLogs(traceLogs) {
         context = {
           address: analyzed.address,
           functionId: analyzed.functionId,
-          traceLogs: []
+          traceLogs: [],
+          type: log.op
         }
         if (context.functionId === 'unknown') {
           searchFunctionId = true
@@ -111,6 +127,11 @@ function separateTraceLogs(traceLogs) {
         res.push(context) // save separated logs.
       }
     } else if (isEndOpcode(log.op)) {
+      if (context.functionId === NEW_CONTRACT) {
+        // if Return from CREATE or CREATE2, so new contract address is stored
+        // stack top at next traceLog.
+        context.address = '0x' + traceLogs[index + 1].stack[0].slice(24)
+      }
       context = callStack.pop()
     }
   })

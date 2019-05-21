@@ -1,0 +1,50 @@
+{
+  "contractName": "Sum",
+  "abi": [
+    {
+      "name": "addNum",
+      "outputs": [],
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "new_value"
+        }
+      ],
+      "constant": false,
+      "payable": false,
+      "type": "function",
+      "gas": 36138
+    },
+    {
+      "name": "get",
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "out"
+        }
+      ],
+      "inputs": [],
+      "constant": true,
+      "payable": false,
+      "type": "function",
+      "gas": 513
+    }
+  ],
+  "bytecode": "0x61011756600035601c52740100000000000000000000000000000000000000006020526f7fffffffffffffffffffffffffffffff6040527fffffffffffffffffffffffffffffffff8000000000000000000000000000000060605274012a05f1fffffffffffffffffffffffffdabf41c006080527ffffffffffffffffffffffffed5fa0e000000000000000000000000000000000060a052637527836260005114156100e757602060046101403734156100b457600080fd5b600061014051116100c457600080fd5b600054610140516000540110156100da57600080fd5b6101405160005401600055005b636d4ce63c600051141561010d57341561010057600080fd5b60005460005260206000f3005b60006000fd5b61000461011703610004600039610004610117036000f3",
+  "deployedBytecode": "0x600035601c52740100000000000000000000000000000000000000006020526f7fffffffffffffffffffffffffffffff6040527fffffffffffffffffffffffffffffffff8000000000000000000000000000000060605274012a05f1fffffffffffffffffffffffffdabf41c006080527ffffffffffffffffffffffffed5fa0e000000000000000000000000000000000060a052637527836260005114156100e757602060046101403734156100b457600080fd5b600061014051116100c457600080fd5b600054610140516000540110156100da57600080fd5b6101405160005401600055005b636d4ce63c600051141561010d57341561010057600080fd5b60005460005260206000f3005b60006000fd",
+  "sourcePath": "/Users/nakajo/work/ethereum-test/vyper-example/contracts/Sum.vy",
+  "compiler": {
+    "name": "vyper",
+    "version": "0.1.0b9"
+  },
+  "networks": {
+    "5777": {
+      "events": {},
+      "links": {},
+      "address": "0xadDf5bC8b45571D94e2FD46Bfb81f8dD6D6f9FA0",
+      "transactionHash": "0xd151a2f72fe9dff87cd3839bfad196552b6f6aab8c79407e5889541e7af34b81"
+    }
+  },
+  "schemaVersion": "3.0.9",
+  "updatedAt": "2019-05-07T15:56:59.720Z"
+}

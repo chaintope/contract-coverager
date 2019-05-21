@@ -2,9 +2,10 @@ const inherits = require('util').inherits
 const promisify = require('util').promisify
 const { separateTraceLogs } = require('./tracelog_utils')
 const Subprovider = require('web3-provider-engine/subproviders/subprovider')
-const TraceCollector = require('./trace_collector')
+const { TraceCollector, TRACE_LOG_TYPE } = require('./trace_collector')
 const TruffleArtifactResolver = require('./truffle_artifacts_resolver')
 const Coverager = require('./coverager')
+const { NEW_CONTRACT } = require('./constants')
 
 const NonEmitterProvider = require('./non_emitter_provider')
 const Web3ProviderEngine = require('web3-provider-engine')
@@ -28,8 +29,7 @@ function CoverageSubprovider(provider, jsonGlob = null) {
     provider.sendAsync = provider.send
   }
   this.provider = provider
-  this.resolver = jsonGlob ? new TruffleArtifactResolver(jsonGlob) : new TruffleArtifactResolver()
-  this.collector = new TraceCollector()
+  this.jsonGlob = jsonGlob
 }
 
 function debugTraceTransaction(txhash, cb) {
@@ -60,6 +60,14 @@ function getCode(address, cb) {
   }, cb)
 }
 
+function getReceipt(txhash, cb) {
+  const self = this
+  self.emitPayload({
+    method: 'eth_getTransactionReceipt',
+    params: [txhash]
+  }, cb)
+}
+
 function isNewContract(address) {
   return (address === '0x' || address === '' || address === undefined)
 }
@@ -82,18 +90,27 @@ function injectInTruffle(artifacts, web3, fglob = null) {
     result.setProvider(web3.currentProvider)
     return result
   }
-  artifacts.require._coverageProvider = web3.currentProvider
+  artifacts.require._coverageProvider = engine
   return engine
 }
 
+// define class methods
 CoverageSubprovider.injectInTruffle = injectInTruffle
+
+// promisifies
 CoverageSubprovider.prototype._debugTraceTransaction = promisify(debugTraceTransaction)
 CoverageSubprovider.prototype._sendTransaction = promisify(sendTransaction)
 CoverageSubprovider.prototype._getCode = promisify(getCode)
+CoverageSubprovider.prototype._getReceipt = promisify(getReceipt)
 
 CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
   const self = this
 
+  /**
+   * record contract address by code that is gived from node.
+   * @param contractAddress
+   * @return {Function}
+   */
   function findContract(contractAddress) {
     return async() => {
       if (!self.resolver.exists(contractAddress)) {
@@ -103,49 +120,84 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
     }
   }
 
-  function getTraceAndCollect(contractAddress) {
+  /**
+   * getDebugTrace and record that.
+   * @param contractAddress
+   * @param traceType
+   * @return {function(*=): *}
+   */
+  function functionCallTraceAndCollect(contractAddress, traceType) {
     return async function(txHash) {
       const response = await self._debugTraceTransaction(txHash)
       const separated = separateTraceLogs(response.result.structLogs)
-      self.collector.add(contractAddress, separated[0].traceLogs)
+      // separated[0] is start point.
+      // it may be constructor case.
+      self.collector.add(contractAddress, separated[0].traceLogs, traceType)
       await findContract(contractAddress)()
       for (let i = 1; i < separated.length; i++) {
         const trace = separated[i]
-        self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
-        self.collector.add(trace.address, trace.traceLogs)
+        if (trace.functionId === NEW_CONTRACT) {
+          self.collector.recordCreation(trace.address)
+          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.CREATE)
+        } else {
+          self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
+          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.FUNCTION)
+        }
         await findContract(trace.address)()
       }
+      return txHash
     }
   }
 
-  let traceFunc = async() => {}
+  /**
+   * record construcor trace infos.
+   * @param initBytecodes
+   * @return {Function}
+   */
+  function creationTraceAndCollect(initBytecodes) {
+    return async function(txHash) {
+      const receipt = await self._getReceipt(txHash)
+      self.collector.recordCreation(receipt.result.contractAddress)
+      self.resolver.findByCodeHash(initBytecodes, receipt.result.contractAddress)
+      await functionCallTraceAndCollect(receipt.result.contractAddress, TRACE_LOG_TYPE.CREATE)(txHash)
+    }
+  }
+
+  let traceFunc = () => { return Promise.resolve('') }
   switch (payload.method) {
     case 'eth_call':
-      // self.collector.recordFunctionCall(payload.params[0])
-      // traceFunc = findContract(payload.params[0].to)
-      traceFunc = () => self._sendTransaction(payload.params[0])
+      if (payload.params[0].to) { // workaround for double count constructor when calling `new` method.
+        traceFunc = () => self._sendTransaction(payload.params[0])
+      }
       break
 
     case 'eth_sendTransaction':
       const param = payload.params[0]
-      if (!isNewContract(param.to) && param.data.length > 4) {
-        self.collector.recordFunctionCall(param)
-        traceFunc = getTraceAndCollect(param.to)
+      if (param.data.length > 4) { // data empty tx is just send ETH tx.
+        if (isNewContract(param.to)) {
+          traceFunc = creationTraceAndCollect(param.data)
+        } else {
+          self.collector.recordFunctionCall(param)
+          traceFunc = functionCallTraceAndCollect(param.to, TRACE_LOG_TYPE.FUNCTION)
+        }
       }
       break
   }
 
   this.provider.sendAsync(payload, function(err, response) {
     if (err) return end(err)
-    if (response.error) return end(response.error.message)
-    traceFunc(response.result).then(() => {
+    traceFunc(response.result).then(res => {
+      // check error just first response.
+      if (response.error) return end(response.error.message)
       end(null, response.result)
     }).catch(e => end(e))
   })
 }
 
 CoverageSubprovider.prototype.start = function() {
+  this.resolver = this.jsonGlob ? new TruffleArtifactResolver(this.jsonGlob) : new TruffleArtifactResolver()
   this.resolver.load()
+  this.collector = new TraceCollector()
 }
 
 CoverageSubprovider.prototype.stop = function() {
