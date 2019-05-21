@@ -29,8 +29,7 @@ function CoverageSubprovider(provider, jsonGlob = null) {
     provider.sendAsync = provider.send
   }
   this.provider = provider
-  this.resolver = jsonGlob ? new TruffleArtifactResolver(jsonGlob) : new TruffleArtifactResolver()
-  this.collector = new TraceCollector()
+  this.jsonGlob = jsonGlob
 }
 
 function debugTraceTransaction(txhash, cb) {
@@ -91,7 +90,7 @@ function injectInTruffle(artifacts, web3, fglob = null) {
     result.setProvider(web3.currentProvider)
     return result
   }
-  artifacts.require._coverageProvider = web3.currentProvider
+  artifacts.require._coverageProvider = engine
   return engine
 }
 
@@ -196,7 +195,9 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
 }
 
 CoverageSubprovider.prototype.start = function() {
+  this.resolver = this.jsonGlob ? new TruffleArtifactResolver(this.jsonGlob) : new TruffleArtifactResolver()
   this.resolver.load()
+  this.collector = new TraceCollector()
 }
 
 CoverageSubprovider.prototype.stop = function() {
