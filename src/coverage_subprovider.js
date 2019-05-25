@@ -103,66 +103,68 @@ CoverageSubprovider.prototype._sendTransaction = promisify(sendTransaction)
 CoverageSubprovider.prototype._getCode = promisify(getCode)
 CoverageSubprovider.prototype._getReceipt = promisify(getReceipt)
 
+/**
+ * record contract address by code that is gived from node.
+ * @param contractAddress
+ * @return {Function}
+ */
+CoverageSubprovider.prototype._findContract = function(contractAddress) {
+  const self = this
+  return async() => {
+    if (!self.resolver.exists(contractAddress)) {
+      const response = await self._getCode(contractAddress)
+      if (response.result != null) { self.resolver.findByCodeHash(response.result, contractAddress) }
+    }
+  }
+}
+
+/**
+ * record construcor trace infos.
+ * @param initBytecodes
+ * @return {Function}
+ */
+CoverageSubprovider.prototype._creationTraceAndCollect = function(initBytecodes) {
+  const self = this
+  return async function(txHash) {
+    const receipt = await self._getReceipt(txHash)
+    self.collector.recordCreation(receipt.result.contractAddress)
+    self.resolver.findByCodeHash(initBytecodes, receipt.result.contractAddress)
+    await self._functionCallTraceAndCollect(receipt.result.contractAddress, TRACE_LOG_TYPE.CREATE)(txHash)
+  }
+}
+
+/**
+ * getDebugTrace and record that.
+ * @param contractAddress
+ * @param traceType
+ * @return {function(*=): *}
+ */
+CoverageSubprovider.prototype._functionCallTraceAndCollect = function(contractAddress, traceType) {
+  const self = this
+  return async function(txHash) {
+    const response = await self._debugTraceTransaction(txHash)
+    const separated = separateTraceLogs(response.result.structLogs)
+    // separated[0] is start point.
+    // it may be constructor case.
+    self.collector.add(contractAddress, separated[0].traceLogs, traceType)
+    await self._findContract(contractAddress)()
+    for (let i = 1; i < separated.length; i++) {
+      const trace = separated[i]
+      if (trace.functionId === NEW_CONTRACT) {
+        self.collector.recordCreation(trace.address)
+        self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.CREATE)
+      } else {
+        self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
+        self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.FUNCTION)
+      }
+      await self._findContract(trace.address)()
+    }
+    return txHash
+  }
+}
+
 CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
   const self = this
-
-  /**
-   * record contract address by code that is gived from node.
-   * @param contractAddress
-   * @return {Function}
-   */
-  function findContract(contractAddress) {
-    return async() => {
-      if (!self.resolver.exists(contractAddress)) {
-        const response = await self._getCode(contractAddress)
-        if (response.result != null) { self.resolver.findByCodeHash(response.result, contractAddress) }
-      }
-    }
-  }
-
-  /**
-   * getDebugTrace and record that.
-   * @param contractAddress
-   * @param traceType
-   * @return {function(*=): *}
-   */
-  function functionCallTraceAndCollect(contractAddress, traceType) {
-    return async function(txHash) {
-      const response = await self._debugTraceTransaction(txHash)
-      const separated = separateTraceLogs(response.result.structLogs)
-      // separated[0] is start point.
-      // it may be constructor case.
-      self.collector.add(contractAddress, separated[0].traceLogs, traceType)
-      await findContract(contractAddress)()
-      for (let i = 1; i < separated.length; i++) {
-        const trace = separated[i]
-        if (trace.functionId === NEW_CONTRACT) {
-          self.collector.recordCreation(trace.address)
-          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.CREATE)
-        } else {
-          self.collector.recordFunctionCall({ to: trace.address, data: trace.functionId })
-          self.collector.add(trace.address, trace.traceLogs, TRACE_LOG_TYPE.FUNCTION)
-        }
-        await findContract(trace.address)()
-      }
-      return txHash
-    }
-  }
-
-  /**
-   * record construcor trace infos.
-   * @param initBytecodes
-   * @return {Function}
-   */
-  function creationTraceAndCollect(initBytecodes) {
-    return async function(txHash) {
-      const receipt = await self._getReceipt(txHash)
-      self.collector.recordCreation(receipt.result.contractAddress)
-      self.resolver.findByCodeHash(initBytecodes, receipt.result.contractAddress)
-      await functionCallTraceAndCollect(receipt.result.contractAddress, TRACE_LOG_TYPE.CREATE)(txHash)
-    }
-  }
-
   let traceFunc = () => { return Promise.resolve('') }
   switch (payload.method) {
     case 'eth_call':
@@ -175,10 +177,10 @@ CoverageSubprovider.prototype.handleRequest = function(payload, next, end) {
       const param = payload.params[0]
       if (param.data && param.data.length > 4) { // data empty tx is just send ETH tx.
         if (isNewContract(param.to)) {
-          traceFunc = creationTraceAndCollect(param.data)
+          traceFunc = self._creationTraceAndCollect(param.data)
         } else {
           self.collector.recordFunctionCall(param)
-          traceFunc = functionCallTraceAndCollect(param.to, TRACE_LOG_TYPE.FUNCTION)
+          traceFunc = self._functionCallTraceAndCollect(param.to, TRACE_LOG_TYPE.FUNCTION)
         }
       }
       break
