@@ -4,10 +4,10 @@
  * @param sourceMap
  * @return {{offset: <int>, length: <int>, fileIndex: <int>}[]}
  */
-function parse (sourceMap) {
+function parse(sourceMap) {
   const items = sourceMap.split(';')
   const entries = items.map(i => i.split(':')).map(_toEntry)
-  let previous = undefined
+  let previous
   return entries.map(e => {
     const newe = _extendsBeforeEntry(e, previous)
     previous = newe
@@ -23,7 +23,7 @@ function parse (sourceMap) {
  * @return {{offset: <int>, length: <int>, fileIndex: <int>}}
  * @private
  */
-function _toEntry (items) {
+function _toEntry(items) {
   const [offset, length, fileIndex] = items.map(i => i === undefined || i === '' ? undefined : parseInt(i))
   return {
     offset,
@@ -44,14 +44,11 @@ function _toEntry (items) {
  * @return {{offset: <int>, length: <int>, fileIndex: <int>}}
  * @private
  */
-function _extendsBeforeEntry (current, before) {
+function _extendsBeforeEntry(current, before) {
   const res = Object.assign({}, current)
-  if (res.offset === undefined)
-    res.offset = before.offset
-  if (res.length === undefined)
-    res.length = before.length
-  if (res.fileIndex === undefined)
-    res.fileIndex = before.fileIndex
+  if (res.offset === undefined) { res.offset = before.offset }
+  if (res.length === undefined) { res.length = before.length }
+  if (res.fileIndex === undefined) { res.fileIndex = before.fileIndex }
 
   return res
 }
@@ -62,16 +59,12 @@ function _extendsBeforeEntry (current, before) {
  * @param source_datas
  * @return {Array}
  */
-function posToLineConvertMap (source_datas) {
-  const lineColTemplate = {
-    line: 0,
-    col: 0
-  }
+function posToLineConvertMap(sourceDatas) {
   let line = 0
   let col = 0
   const convertMap = []
-  source_datas.split('').map((word, index) => {
-    convertMap.push({line, col})
+  sourceDatas.split('').map((word, index) => {
+    convertMap.push({ line, col })
     col += 1
     if (word === '\n') {
       line += 1

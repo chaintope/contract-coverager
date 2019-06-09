@@ -110,7 +110,7 @@ CoverageSubprovider.prototype._getReceipt = promisify(getReceipt)
  */
 CoverageSubprovider.prototype._findContract = function(contractAddress) {
   const self = this
-  return async () => {
+  return async() => {
     if (!self.resolver.exists(contractAddress)) {
       const response = await self._getCode(contractAddress)
       if (response.result != null) { self.resolver.findByCodeHash(response.result, contractAddress) }
