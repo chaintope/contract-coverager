@@ -67,7 +67,6 @@ describe('coverage_subprovider.js', function() {
     beforeEach(() => {
       mockProvider = new MockProvider()
       spy = sinon.spy(mockProvider, 'sendAsync')
-      // sinon.spy(mockProvider, 'sendAsync')
       cs = new CoverageSubprovider(mockProvider, './test/resources/example1/build/contracts/**/*.json')
       engine.addProvider(cs)
       engine.start()

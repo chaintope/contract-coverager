@@ -31,8 +31,8 @@ class Coverager {
     indexBaseAddressArray.forEach((addrs, index) => {
       const rawData = {}
       rawData.contract = self.resolver.contractsData[index]
-      const functionTraces = addrs.map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.FUNCTION])
-      const createTraces = addrs.map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.CREATE])
+      const functionTraces = addrs.filter(addr => self.collector.traceMap[addr] !== undefined).map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.FUNCTION])
+      const createTraces = addrs.filter(addr => self.collector.traceMap[addr] !== undefined).map(addr => self.collector.traceMap[addr][TRACE_LOG_TYPE.CREATION])
       const funcCalls = addrs.map(addr => self.collector.funcCallMap[addr])
       rawData.functionTraces = flatten(functionTraces)
       rawData.createTraces = flatten(createTraces)
