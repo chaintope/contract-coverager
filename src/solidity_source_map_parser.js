@@ -71,6 +71,7 @@ function posToLineConvertMap(sourceDatas) {
       col = 0
     }
   })
+  convertMap.push({ line, col })
   return convertMap
 }
 

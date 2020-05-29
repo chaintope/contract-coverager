@@ -40,7 +40,7 @@ describe('solidity_source_map_parser.js', function() {
     const sampleSource = 'pragma solidity 5.7.0;\n\n\ncontract Sample {}'
     it('simple', async() => {
       const cmap = posToLineConvertMap(sampleSource)
-      expect(cmap).to.have.lengthOf(43)
+      expect(cmap).to.have.lengthOf(44)
       expect(cmap[42].line).to.be.equal(3)
       expect(cmap[22]).to.be.deep.equal({ line: 0, col: 22 })
       expect(cmap[23]).to.be.deep.equal({ line: 1, col: 0 })
@@ -54,8 +54,11 @@ describe('solidity_source_map_parser.js', function() {
       const cdata = resolver.contractsData[1]
       const cmap = posToLineConvertMap(cdata.source)
       expect(cmap).to.have.lengthOf(225)
+      expect(cmap[0]).to.be.deep.equal({ line: 0, col: 0 })
       expect(cmap[31]).to.be.deep.equal({ line: 0, col: 31 })
       expect(cmap[32]).to.be.deep.equal({ line: 1, col: 0 })
+      expect(cmap[33]).to.be.deep.equal({ line: 2, col: 0 })
+      expect(cmap[224]).to.be.deep.equal({ line: 10, col: 1 })
     })
   })
 })
