@@ -1,4 +1,4 @@
-const { parse, posToLineConvertMap } = require('../src/solidity_source_map_parser')
+const { parse, posToLineConvertMap, convertInstructionMap } = require('../src/solidity_source_map_parser')
 const TruffleArtifactsResolver = require('../src/truffle_artifacts_resolver')
 const { expect } = require('chai')
 
@@ -59,6 +59,20 @@ describe('solidity_source_map_parser.js', function() {
       expect(cmap[32]).to.be.deep.equal({ line: 1, col: 0 })
       expect(cmap[33]).to.be.deep.equal({ line: 2, col: 0 })
       expect(cmap[224]).to.be.deep.equal({ line: 10, col: 1 })
+    })
+  })
+  describe('convertInstructionMap', function() {
+    it('simple', async() => {
+      const bytecodes = '0:23:0:-;:4;5:17'
+      const sampleSource = 'hoge\nuint256 _num = 0;\n'
+      const entries = parse(bytecodes)
+      const cmap = posToLineConvertMap(sampleSource)
+
+      const imap = convertInstructionMap(entries,  cmap)
+      expect(imap).to.have.lengthOf(3)
+      expect(imap[0]).to.be.deep.equal({start: {line: 0, col: 0, pos: 0}, end: {line: 2, col: 0, pos:23}})
+      expect(imap[1]).to.be.deep.equal({start: {line: 0, col: 0, pos: 0}, end: {line: 0, col: 4, pos:4}})
+      expect(imap[2]).to.be.deep.equal({start: {line: 1, col: 0, pos: 5}, end: {line: 1, col: 17, pos:22}})
     })
   })
 })

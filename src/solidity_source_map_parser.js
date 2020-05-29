@@ -75,7 +75,23 @@ function posToLineConvertMap(sourceDatas) {
   return convertMap
 }
 
+/**
+ * Provide the converted mapping information that the executable bytecode position is which line in source code.
+ *
+ * @param sourceMapJson: the source map info of bytecode.
+ * @param linePosJson: the mapping info about line num and pos in source code.
+ */
+function convertInstructionMap(sourceMapJson, linePosJson) {
+  return sourceMapJson.map(e => {
+    const start = Object.assign(linePosJson[e.offset], {pos: e.offset})
+    const endPos = e.offset + e.length
+    const end = Object.assign(linePosJson[endPos], {pos: endPos})
+    return {start,end}
+  })
+}
+
 module.exports = {
   parse,
-  posToLineConvertMap
+  posToLineConvertMap,
+  convertInstructionMap
 }
