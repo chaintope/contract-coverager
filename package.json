@@ -49,25 +49,25 @@
   },
   "dependencies": {
     "cli-table": "^0.3.1",
-    "colors": "^1.3.3",
+    "colors": "^1.4.0",
     "keccak256": "^1.0.0",
-    "truffle-code-utils": "^1.2.2",
-    "web3-provider-engine": "^15.0.0"
+    "truffle-code-utils": "^1.2.4",
+    "web3-provider-engine": "^15.0.12"
   },
   "devDependencies": {
-    "babel-eslint": "^10.0.1",
+    "babel-eslint": "^10.1.0",
     "chai": "^4.2.0",
     "eslint": "^5.16.0",
     "eslint-config-standard": "^12.0.0",
-    "eslint-loader": "^2.0.0",
+    "eslint-loader": "^2.2.1",
     "eslint-plugin-chai-friendly": "^0.4.1",
-    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-mocha": "^5.1.0",
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.8.0",
-    "eslint-plugin-react": "^7.9.1",
+    "eslint-plugin-react": "^7.20.0",
     "eslint-plugin-standard": "^3.1.0",
-    "mocha": "^6.1.4",
-    "sinon": "^7.3.2"
+    "mocha": "^6.2.3",
+    "sinon": "^7.5.0"
   }
 }
