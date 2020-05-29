@@ -22,18 +22,18 @@ describe('solidity_source_map_parser.js', function() {
       expect(entries[6]).to.be.deep.equal({ offset: 3, length: 8, fileIndex: 0 })
     })
     it('actual', async() => {
-      const resolver = new TruffleArtifactsResolver('test/resources/example2/build/contracts/**/*.json')
+      const resolver = new TruffleArtifactsResolver('test/resources/example3/build/contracts/**/*.json')
       await resolver.load()
-      const cdata = resolver.contractsData[0]
+      const cdata = resolver.contractsData[1]
       let entries = parse(cdata.sourceMap)
       for (const e of entries) {
         for (const k of Object.keys(e)) {
           expect(e[k]).to.not.be.undefined
         }
       }
-      expect(entries).to.have.lengthOf(41)
+      expect(entries).to.have.lengthOf(20)
       entries = parse(cdata.deployedSourceMap)
-      expect(entries).to.have.lengthOf(347)
+      expect(entries).to.have.lengthOf(280)
     })
   })
   describe('posToLineConvertMap', function() {
@@ -49,13 +49,13 @@ describe('solidity_source_map_parser.js', function() {
       expect(cmap[40]).to.be.deep.equal({ line: 3, col: 15 })
     })
     it('actual', async() => {
-      const resolver = new TruffleArtifactsResolver('test/resources/example2/build/contracts/**/*.json')
+      const resolver = new TruffleArtifactsResolver('test/resources/example3/build/contracts/**/*.json')
       await resolver.load()
-      const cdata = resolver.contractsData[0]
+      const cdata = resolver.contractsData[1]
       const cmap = posToLineConvertMap(cdata.source)
-      expect(cmap).to.have.lengthOf(515)
-      expect(cmap[32]).to.be.deep.equal({ line: 0, col: 32 })
-      expect(cmap[33]).to.be.deep.equal({ line: 1, col: 0 })
+      expect(cmap).to.have.lengthOf(225)
+      expect(cmap[31]).to.be.deep.equal({ line: 0, col: 31 })
+      expect(cmap[32]).to.be.deep.equal({ line: 1, col: 0 })
     })
   })
 })
